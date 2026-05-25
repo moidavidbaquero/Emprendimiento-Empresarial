@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raíces Digitales</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --andina-c:#2d6a4f;--andina-bg:#d8f3dc;
+  --caribe-c:#1565c0;--caribe-bg:#e3f2fd;
+  --pacifica-c:#1b5e20;--pacifica-bg:#e8f5e9;
+  --orinoquia-c:#e65100;--orinoquia-bg:#fff3e0;
+  --amazonia-c:#2e7d32;--amazonia-bg:#f1f8e9;
+  --insular-c:#1a237e;--insular-bg:#e8eaf6;
+  --gold:#f5c518;--silver:#9e9e9e;--bronze:#a0522d;
+  --text:#1a1a2e;--muted:#666;--bg:#faf9f6;--white:#fff;--border:#eeeeee;
+  --ok-bg:#e8f5e9;--ok-c:#2e7d32;--err-bg:#fdecea;--err-c:#c62828;
+  --timer-ok:#2d6a4f;--timer-warn:#e65100;--timer-danger:#c62828;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ===== VIEWS ===== */
+.view{display:none;}
+.view.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.18);}100%{transform:scale(1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-7px);}40%{transform:translateX(7px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+@keyframes slideUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+@keyframes heroBg{0%{background-position:0% 50%;}100%{background-position:100% 50%;}}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes timerPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+@keyframes chestOpen{0%{transform:scale(1) rotateY(0);}50%{transform:scale(1.15) rotateY(10deg);}100%{transform:scale(1) rotateY(0);}}
+@keyframes badgePop{0%{transform:scale(0) rotate(-12deg);}60%{transform:scale(1.2) rotate(4deg);}100%{transform:scale(1) rotate(0deg);}}
+@keyframes confettiDrop{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(80px) rotate(360deg);opacity:0;}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(245,197,24,.35);}50%{box-shadow:0 0 0 10px rgba(245,197,24,0);}}
+
+/* ===== SCORE BAR ===== */
+.score-bar{
+  position:sticky;top:0;z-index:200;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+  border-bottom:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.6rem 1.3rem;
+}
+.sb-pts{display:flex;align-items:center;gap:.4rem;font-size:.88rem;font-weight:600;}
+.sb-coin{font-size:1rem;}
+.sb-streak{color:#e65100;font-weight:700;font-size:.85rem;min-width:48px;text-align:center;}
+.sb-level{background:var(--gold);color:#1a1a2e;border-radius:20px;padding:.22rem .75rem;font-size:.76rem;font-weight:700;}
+.pts-toast{position:fixed;top:62px;right:1.2rem;background:var(--gold);color:#1a1a2e;border-radius:50px;padding:.4rem 1rem;font-size:.9rem;font-weight:800;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateY(-8px);z-index:999;}
+.pts-toast.show{opacity:1;transform:translateY(0);}
+
+/* ===== HERO ===== */
+#hero{
+  min-height:100vh;
+  background:linear-gradient(135deg,#f5c518 0%,#4a90d9 40%,#7b5ea7 70%,#e07b8c 100%);
+  background-size:200% 200%;animation:heroBg 8s ease-in-out infinite alternate;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;position:relative;overflow:hidden;
+}
+.hero-logo{
+  width:90px;height:90px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.8);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:white;
+  margin-bottom:1.5rem;backdrop-filter:blur(8px);animation:fadeDown .8s ease both;
+}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,6vw,4.5rem);font-weight:900;color:white;letter-spacing:.08em;text-shadow:0 2px 20px rgba(0,0,0,.2);animation:fadeDown .9s ease .1s both;}
+.hero p{font-size:1.1rem;color:rgba(255,255,255,.9);margin-top:.6rem;font-weight:300;letter-spacing:.04em;animation:fadeDown 1s ease .2s both;}
+.hero-stats{display:flex;gap:2rem;margin-top:1.8rem;animation:fadeDown 1.05s ease .25s both;}
+.hero-stat{color:white;text-align:center;}
+.hero-stat .val{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;}
+.hero-stat .lbl{font-size:.75rem;opacity:.75;letter-spacing:.06em;text-transform:uppercase;}
+.hero-btn{
+  margin-top:2rem;padding:.85rem 2.4rem;
+  border:2.5px solid white;border-radius:50px;
+  background:rgba(255,255,255,.15);color:white;
+  font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;
+  cursor:pointer;backdrop-filter:blur(6px);
+  transition:background .3s,transform .2s;animation:fadeDown 1.1s ease .35s both;
+}
+.hero-btn:hover{background:white;color:#4a90d9;transform:translateY(-2px);}
+.hero-sub{position:absolute;bottom:1.8rem;font-size:.82rem;color:rgba(255,255,255,.7);letter-spacing:.05em;animation:fadeDown 1.2s ease .45s both;}
+
+/* ===== WRAPPER ===== */
+.page-wrap{max-width:640px;margin:0 auto;padding:1.8rem 1.2rem 5rem;}
+
+/* ===== REGIONS VIEW ===== */
+.rd-header{text-align:center;margin-bottom:2rem;}
+.rd-logo{font-size:2.2rem;margin-bottom:.4rem;}
+.rd-header h2{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;}
+.rd-header .tagline{font-size:.88rem;color:var(--muted);margin-top:.2rem;}
+.rd-header .desc{font-size:.93rem;color:#444;margin-top:.85rem;line-height:1.6;}
+
+/* Ruleta CTA */
+.ruleta-cta{
+  background:linear-gradient(135deg,#7b5ea7,#4a90d9);
+  border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.6rem;
+  display:flex;align-items:center;gap:1rem;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+  animation:pulseGlow 3s infinite;
+}
+.ruleta-cta:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(74,144,217,.3);}
+.ruleta-icon{font-size:2rem;flex-shrink:0;}
+.ruleta-info{flex:1;}
+.ruleta-info h3{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:white;}
+.ruleta-info p{font-size:.82rem;color:rgba(255,255,255,.85);margin-top:.1rem;}
+.ruleta-arrow{color:rgba(255,255,255,.7);font-size:1.3rem;}
+
+.section-title{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;text-align:center;margin:1.6rem 0 .25rem;}
+.section-sub{text-align:center;font-size:.83rem;color:#777;margin-bottom:1rem;}
+
+.region-card{
+  background:var(--white);border-radius:14px;padding:1.05rem 1.25rem;margin-bottom:.8rem;
+  display:flex;align-items:center;gap:1rem;cursor:pointer;
+  border:1.5px solid var(--border);transition:box-shadow .25s,transform .2s,border-color .2s;
+  position:relative;
+}
+.region-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.09);transform:translateY(-2px);border-color:#ccc;}
+.rc-icon{font-size:2rem;width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rc-info h3{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;}
+.rc-info p{font-size:.81rem;color:var(--muted);margin-top:.15rem;line-height:1.4;}
+.rc-info small{font-size:.74rem;font-weight:600;}
+.rc-arrow{margin-left:auto;color:#aaa;font-size:1.1rem;flex-shrink:0;}
+.rc-badge{position:absolute;top:-7px;right:-7px;background:var(--gold);color:#1a1a2e;border-radius:50%;width:24px;height:24px;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid white;}
+
+.r-andina .rc-icon{background:var(--andina-bg);}
+.r-andina .rc-info h3{color:var(--andina-c);}
+.r-andina .rc-info small{color:var(--andina-c);}
+.r-caribe .rc-icon{background:var(--caribe-bg);}
+.r-caribe .rc-info h3{color:var(--caribe-c);}
+.r-caribe .rc-info small{color:var(--caribe-c);}
+.r-pacifica .rc-icon{background:var(--pacifica-bg);}
+.r-pacifica .rc-info h3{color:var(--pacifica-c);}
+.r-pacifica .rc-info small{color:var(--pacifica-c);}
+.r-orinoquia .rc-icon{background:var(--orinoquia-bg);}
+.r-orinoquia .rc-info h3{color:var(--orinoquia-c);}
+.r-orinoquia .rc-info small{color:var(--orinoquia-c);}
+.r-amazonia .rc-icon{background:var(--amazonia-bg);}
+.r-amazonia .rc-info h3{color:var(--amazonia-c);}
+.r-amazonia .rc-info small{color:var(--amazonia-c);}
+.r-insular .rc-icon{background:var(--insular-bg);}
+.r-insular .rc-info h3{color:var(--insular-c);}
+.r-insular .rc-info small{color:var(--insular-c);}
+
+/* Badges preview */
+.badges-section{margin-top:1.8rem;}
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.8rem;}
+.badge-mini{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:.9rem .6rem;text-align:center;transition:transform .2s;}
+.badge-mini:hover{transform:translateY(-2px);}
+.badge-mini .bm-icon{font-size:1.8rem;margin-bottom:.3rem;filter:grayscale(1);opacity:.4;transition:filter .4s,opacity .4s;}
+.badge-mini.unlocked .bm-icon{filter:none;opacity:1;}
+.badge-mini .bm-name{font-size:.73rem;font-weight:600;color:var(--muted);}
+.badge-mini.unlocked .bm-name{color:var(--text);}
+.badge-mini .bm-locked{font-size:.65rem;color:#bbb;margin-top:.1rem;}
+
+/* Progress */
+.progress-bar-wrap{background:#eee;border-radius:99px;height:8px;margin-top:.6rem;}
+.progress-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),#e65100);transition:width .6s ease;}
+.progress-label{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:.3rem;}
+
+.diversity-box{background:#fff9e6;border-left:4px solid var(--gold);border-radius:10px;padding:1rem 1.2rem;margin-top:1.8rem;}
+.diversity-box h4{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;margin-bottom:.35rem;}
+.diversity-box p{font-size:.85rem;color:#555;line-height:1.6;}
+
+/* ===== DETAIL VIEW ===== */
+.back-btn{background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.9rem;color:#555;display:flex;align-items:center;gap:.4rem;margin-bottom:1.2rem;padding:0;transition:color .2s;}
+.back-btn:hover{color:var(--text);}
+.detail-hero{border-radius:16px;padding:1.3rem 1.4rem;display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.2rem;}
+.dh-icon{font-size:2.3rem;width:60px;height:60px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.55);}
+.detail-hero h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;}
+.detail-hero p{font-size:.86rem;margin-top:.28rem;line-height:1.5;opacity:.85;}
+.detail-card{background:var(--white);border-radius:14px;padding:1.2rem 1.3rem;margin-bottom:.9rem;border:1.5px solid var(--border);}
+.detail-card h3{font-size:.95rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.45rem;}
+.detail-card ul{list-style:none;display:flex;flex-direction:column;gap:.4rem;}
+.detail-card ul li{font-size:.86rem;color:#444;padding-left:1rem;position:relative;line-height:1.5;}
+.detail-card ul li::before{content:'';width:6px;height:6px;border-radius:50%;position:absolute;left:0;top:7px;background:var(--bullet-c,#888);}
+.tags{display:flex;flex-wrap:wrap;gap:.45rem;}
+.tag{padding:.32rem .85rem;border-radius:50px;font-size:.78rem;font-weight:500;border:1.8px solid currentColor;}
+.tag.filled{border:none;color:white;}
+.dept-text{font-size:.86rem;color:#444;line-height:1.6;}
+.reflexion{background:#fff9e6;border:1.5px solid #f5e290;border-radius:12px;padding:.9rem 1.1rem;margin-top:1rem;font-size:.83rem;color:#555;line-height:1.6;display:flex;gap:.55rem;}
+.quiz-cta-btn{
+  width:100%;margin-top:1.3rem;padding:1rem 1.4rem;
+  border:none;border-radius:14px;
+  font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;
+  cursor:pointer;color:white;
+  display:flex;align-items:center;justify-content:center;gap:.6rem;
+  transition:transform .2s,box-shadow .2s;animation:pulseGlow 2s infinite;
+}
+.quiz-cta-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.18);}
+
+/* ===== QUIZ VIEW ===== */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;}
+.q-region{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;}
+.q-prog{font-size:.8rem;color:var(--muted);}
+.quiz-prog-bar{width:100%;height:6px;background:#eee;border-radius:99px;margin-bottom:1.4rem;overflow:hidden;}
+.quiz-prog-fill{height:100%;border-radius:99px;transition:width .5s ease;}
+
+/* TIMER */
+.timer-wrap{display:flex;align-items:center;gap:.75rem;margin-bottom:1.2rem;}
+.timer-arc{position:relative;width:52px;height:52px;flex-shrink:0;}
+.timer-arc svg{transform:rotate(-90deg);}
+.timer-arc .arc-bg{fill:none;stroke:#eee;stroke-width:5;}
+.timer-arc .arc-fill{fill:none;stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .9s linear,stroke .3s;}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;}
+.timer-bar{flex:1;height:8px;background:#eee;border-radius:99px;overflow:hidden;}
+.timer-bar-fill{height:100%;border-radius:99px;transition:width .9s linear,background .3s;}
+
+.question-card{background:var(--white);border-radius:18px;padding:1.5rem 1.4rem;margin-bottom:.9rem;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.05);}
+.q-num{font-size:.72rem;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem;}
+.q-text{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;line-height:1.45;margin-bottom:1.2rem;}
+.options-grid{display:flex;flex-direction:column;gap:.65rem;}
+.option-btn{
+  width:100%;padding:.8rem 1rem;border:2px solid var(--border);border-radius:12px;
+  background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;
+  font-size:.9rem;font-weight:500;text-align:left;display:flex;align-items:center;gap:.7rem;
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.option-btn:hover:not(:disabled){border-color:#4a90d9;background:#f0f5ff;transform:translateX(3px);}
+.opt-letter{width:27px;height:27px;border-radius:50%;flex-shrink:0;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;}
+.option-btn.correct{border-color:var(--ok-c);background:var(--ok-bg);animation:pop .35s ease;}
+.option-btn.correct .opt-letter{background:var(--ok-c);color:white;}
+.option-btn.wrong{border-color:var(--err-c);background:var(--err-bg);animation:shake .4s ease;}
+.option-btn.wrong .opt-letter{background:var(--err-c);color:white;}
+.option-btn:disabled{cursor:default;opacity:.85;}
+
+.feedback-panel{border-radius:14px;padding:1rem 1.2rem;margin-top:.2rem;display:none;gap:.65rem;align-items:flex-start;animation:slideUp .35s ease both;}
+.feedback-panel.ok{background:var(--ok-bg);border:1.5px solid var(--ok-c);display:flex;}
+.feedback-panel.err{background:var(--err-bg);border:1.5px solid var(--err-c);display:flex;}
+.fb-icon{font-size:1.3rem;flex-shrink:0;}
+.fb-title{font-size:.9rem;font-weight:700;margin-bottom:.2rem;}
+.feedback-panel.ok .fb-title{color:var(--ok-c);}
+.feedback-panel.err .fb-title{color:var(--err-c);}
+.fb-text{font-size:.83rem;color:#444;line-height:1.5;}
+.next-btn{width:100%;margin-top:.9rem;padding:.88rem;border:none;border-radius:12px;background:linear-gradient(135deg,#4a90d9,#7b5ea7);color:white;font-family:'DM Sans',sans-serif;font-size:.93rem;font-weight:600;cursor:pointer;display:none;transition:transform .2s;}
+.next-btn:hover{transform:translateY(-2px);}
+
+/* Timeout flash */
+.timeout-flash{position:fixed;inset:0;background:rgba(198,40,40,.12);pointer-events:none;z-index:300;opacity:0;transition:opacity .3s;}
+.timeout-flash.show{opacity:1;}
+
+/* ===== RULETA MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,26,46,.6);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-box{background:var(--white);border-radius:22px;padding:2rem 1.8rem;max-width:420px;width:90%;text-align:center;position:relative;}
+.modal-close{position:absolute;top:.9rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);}
+.modal-box h3{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:.4rem;}
+.modal-box p{font-size:.88rem;color:var(--muted);margin-bottom:1.4rem;line-height:1.5;}
+
+/* Ruleta wheel */
+.wheel-wrap{position:relative;width:240px;height:240px;margin:0 auto 1.4rem;}
+.wheel-wrap canvas{border-radius:50%;box-shadow:0 4px 24px rgba(0,0,0,.18);}
+.wheel-pointer{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:1.8rem;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+.spin-btn{width:100%;padding:.88rem;border:none;border-radius:12px;background:linear-gradient(135deg,#7b5ea7,#4a90d9);color:white;font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;cursor:pointer;transition:transform .2s;}
+.spin-btn:hover{transform:translateY(-2px);}
+.spin-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+/* ===== COFRE MODAL ===== */
+.chest-wrap{font-size:5rem;margin:1rem 0;cursor:pointer;display:block;transition:transform .3s;user-select:none;}
+.chest-wrap:hover{transform:scale(1.08);}
+.chest-wrap.opening{animation:chestOpen .5s ease;}
+.reward-reveal{background:linear-gradient(135deg,#fff9e6,#fff3c4);border:2px solid var(--gold);border-radius:14px;padding:1.2rem;margin-top:1rem;display:none;}
+.reward-reveal.show{display:block;animation:slideUp .4s ease both;}
+.reward-pts{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;color:var(--text);}
+.reward-label{font-size:.85rem;color:var(--muted);margin-top:.2rem;}
+
+/* ===== BADGE MODAL ===== */
+.badge-earned{text-align:center;}
+.badge-earned .be-icon{font-size:5rem;animation:badgePop .5s cubic-bezier(.17,.67,.55,1.3) both;}
+.badge-earned .be-name{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;margin:.6rem 0 .2rem;}
+.badge-earned .be-desc{font-size:.88rem;color:var(--muted);line-height:1.5;}
+.badge-earned .be-pts{font-size:.82rem;color:var(--ok-c);font-weight:600;margin-top:.5rem;}
+.confetti-container{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:22px;}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confettiDrop .9s ease forwards;}
+
+/* ===== RESULTS VIEW ===== */
+.results-trophy{font-size:4.5rem;margin-bottom:.8rem;animation:pop .5s ease .2s both;display:block;}
+.results-title{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;margin-bottom:.3rem;text-align:center;}
+.results-sub{font-size:.92rem;color:var(--muted);text-align:center;margin-bottom:1.6rem;}
+.rs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-bottom:1.6rem;}
+.rs-card{background:var(--white);border-radius:16px;padding:1.1rem .75rem;border:1.5px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:.35rem;text-align:center;}
+.rs-icon{font-size:1.6rem;}
+.rs-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;}
+.rs-lbl{font-size:.72rem;color:var(--muted);}
+.results-grade{background:linear-gradient(135deg,#fff9e6,#fff3c4);border:2px solid var(--gold);border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1.3rem;font-size:.95rem;font-weight:600;color:#7a5c00;line-height:1.6;}
+.res-actions{display:flex;flex-direction:column;gap:.75rem;}
+.res-btn{padding:.88rem;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.93rem;font-weight:600;cursor:pointer;transition:transform .2s;}
+.res-btn:hover{transform:translateY(-2px);}
+.res-btn.primary{background:linear-gradient(135deg,#4a90d9,#7b5ea7);color:white;}
+.res-btn.secondary{background:var(--white);color:var(--text);border:1.5px solid var(--border);}
+.answer-review{text-align:left;margin-top:1.6rem;}
+.answer-review h4{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:.9rem;}
+.ar-item{display:flex;gap:.75rem;align-items:flex-start;background:var(--white);border-radius:12px;padding:.85rem .95rem;margin-bottom:.6rem;border:1.5px solid var(--border);}
+.ar-dot{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.82rem;}
+.ar-item.ar-ok .ar-dot{background:var(--ok-bg);color:var(--ok-c);}
+.ar-item.ar-err .ar-dot{background:var(--err-bg);color:var(--err-c);}
+.ar-q{font-size:.83rem;font-weight:600;margin-bottom:.18rem;}
+.ar-ans{font-size:.78rem;color:var(--muted);}
+.ar-correct-ans{font-size:.78rem;color:var(--ok-c);font-weight:600;margin-top:.15rem;}
+</style>
+</head>
+<body>
+
+<!-- SCORE BAR -->
+<div id="score-bar" class="score-bar" style="display:none;">
+  <div class="sb-pts"><span class="sb-coin">🪙</span><span id="sb-pts">0</span> pts</div>
+  <div class="sb-streak" id="sb-streak"></div>
+  <div class="sb-level" id="sb-level">🌱 Explorador</div>
+</div>
+<div class="pts-toast" id="pts-toast"></div>
+<div class="timeout-flash" id="timeout-flash"></div>
+
+<!-- HERO -->
+<section id="hero" class="view active">
+  <div class="hero-logo">RD</div>
+  <div class="hero">
+    <h1>RAÍCES DIGITALES</h1>
+    <p>Descubre la diversidad cultural de Colombia</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="val">6</div><div class="lbl">Regiones</div></div>
+      <div class="hero-stat"><div class="val">48</div><div class="lbl">Preguntas</div></div>
+      <div class="hero-stat"><div class="val">12</div><div class="lbl">Logros</div></div>
+    </div>
+    <button class="hero-btn" id="hero-btn">Comenzar exploración</button>
+  </div>
+  <div class="hero-sub">co · Fortaleciendo nuestra identidad cultural</div>
+</section>
+
+<!-- REGIONS VIEW -->
+<div id="regions-view" class="view">
+  <div class="page-wrap">
+    <div class="rd-header">
+      <div class="rd-logo">
+  <img src="tu-logo.jpeg" alt="Raíces Digitales" style="width:300px; height:300px;object-fit:contain;">
+</div>
+      <h2>RAÍCES DIGITALES</h2>
+      <div class="tagline">Nuestra identidad cultural</div>
+      <p class="desc">Descubre la riqueza cultural de Colombia. Gana puntos, desbloquea logros y abre cofres al completar cada región.</p>
+    </div>
+
+    <!-- Barra de progreso global -->
+    <div style="margin-bottom:1.4rem;">
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="global-bar" style="width:0%"></div></div>
+      <div class="progress-label"><span id="global-prog-label">0 de 6 regiones completadas</span><span id="global-pct">0%</span></div>
+    </div>
+
+    <!-- CTA Ruleta -->
+    <div class="ruleta-cta" id="ruleta-cta-btn">
+      <div class="ruleta-icon">🎰</div>
+      <div class="ruleta-info">
+        <h3>¡Gira la Ruleta!</h3>
+        <p>Deja que el destino elija tu próxima región</p>
+      </div>
+      <div class="ruleta-arrow">›</div>
+    </div>
+
+    <div class="section-title">Explora las Regiones</div>
+    <div class="section-sub">Selecciona una región para conocer su cultura</div>
+    <div id="region-cards"></div>
+
+    <!-- LOGROS -->
+    <div class="badges-section">
+      <div class="section-title">🏆 Mis Logros</div>
+      <div class="section-sub">Completa quizzes para desbloquear insignias</div>
+      <div class="badges-grid" id="badges-grid"></div>
+    </div>
+
+    <div class="diversity-box">
+      <h4>¿Por qué valorar nuestra diversidad?</h4>
+      <p>Colombia es un país multicultural donde conviven etnias, lenguas y tradiciones únicas. Conocerlas fortalece nuestra identidad y construye una sociedad más inclusiva.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL VIEW -->
+<div id="detail-view" class="view">
+  <div class="page-wrap">
+    <button class="back-btn" id="back-to-regions">← Volver a regiones</button>
+    <div id="detail-content"></div>
+    <div class="reflexion"><span style="font-size:1rem;flex-shrink:0;">💡</span><span>Cada región aporta elementos únicos a nuestra identidad. Conocer estas diferencias nos hace más conscientes de la riqueza cultural de Colombia.</span></div>
+    <button class="quiz-cta-btn" id="quiz-cta-btn">🧠 ¡Pon a prueba tu conocimiento!</button>
+  </div>
+</div>
+
+<!-- QUIZ VIEW -->
+<div id="quiz-view" class="view">
+  <div class="page-wrap">
+    <button class="back-btn" id="back-to-detail">← Volver al detalle</button>
+
+    <!-- Timer -->
+    <div class="timer-wrap">
+      <div class="timer-arc">
+        <svg width="52" height="52" viewBox="0 0 52 52">
+          <circle class="arc-bg" cx="26" cy="26" r="22"/>
+          <circle class="arc-fill" id="arc-fill" cx="26" cy="26" r="22" stroke-dasharray="138.2" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-num" id="timer-num">15</div>
+      </div>
+      <div class="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill" style="width:100%;background:var(--timer-ok);"></div></div>
+    </div>
+
+    <div class="quiz-top">
+      <div class="q-region" id="q-region-name"></div>
+      <div class="q-prog" id="q-progress-text">1 / 5</div>
+    </div>
+    <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="q-progress-fill" style="width:20%;"></div></div>
+
+    <div class="question-card">
+      <div class="q-num" id="q-num">Pregunta 1</div>
+      <div class="q-text" id="q-text"></div>
+      <div class="options-grid" id="options-container"></div>
+    </div>
+
+    <div class="feedback-panel" id="feedback-panel">
+      <div class="fb-icon" id="fb-icon"></div>
+      <div>
+        <div class="fb-title" id="fb-title"></div>
+        <div class="fb-text" id="fb-text"></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-btn">Siguiente pregunta →</button>
+  </div>
+</div>
+
+<!-- RESULTS VIEW -->
+<div id="results-view" class="view">
+  <div class="page-wrap" style="text-align:center;">
+    <span class="results-trophy" id="results-trophy">🏆</span>
+    <div class="results-title" id="results-title">4 de 5 correctas</div>
+    <div class="results-sub" id="results-subtitle">80% — Región Andina</div>
+    <div class="rs-grid">
+      <div class="rs-card"><div class="rs-icon">✅</div><div class="rs-val" id="rs-correct">0</div><div class="rs-lbl">Correctas</div></div>
+      <div class="rs-card"><div class="rs-icon">🪙</div><div class="rs-val" id="rs-pts">0</div><div class="rs-lbl">Puntos totales</div></div>
+      <div class="rs-card"><div class="rs-icon">🔥</div><div class="rs-val" id="rs-streak">0</div><div class="rs-lbl">Mejor racha</div></div>
+    </div>
+    <div class="results-grade" id="results-grade"></div>
+    <div class="res-actions">
+      <button class="res-btn primary" id="retry-btn">🔄 Repetir Quiz</button>
+      <button class="res-btn secondary" id="explore-btn">🗺️ Explorar más regiones</button>
+    </div>
+    <div class="answer-review"><h4>📝 Revisión de respuestas</h4><div id="answer-review-list"></div></div>
+  </div>
+</div>
+
+<!-- MODAL RULETA -->
+<div id="ruleta-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" id="ruleta-close">✕</button>
+    <h3>🎰 La Ruleta Cultural</h3>
+    <p>Gira y descubre qué región te espera. ¡El destino decide!</p>
+    <div class="wheel-wrap">
+      <div class="wheel-pointer">▼</div>
+      <canvas id="wheel-canvas" width="240" height="240"></canvas>
+    </div>
+    <button class="spin-btn" id="spin-btn">🎲 ¡Girar!</button>
+  </div>
+</div>
+
+<!-- MODAL COFRE -->
+<div id="chest-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <div class="confetti-container" id="confetti-container"></div>
+    <h3>🎁 ¡Cofre Desbloqueado!</h3>
+    <p>Completaste el quiz. ¡Toca el cofre para ver tu recompensa!</p>
+    <div class="chest-wrap" id="chest-icon">📦</div>
+    <div class="reward-reveal" id="reward-reveal">
+      <div class="reward-pts" id="reward-pts">+50</div>
+      <div class="reward-label" id="reward-label">puntos de bonificación</div>
+    </div>
+    <button class="spin-btn" id="chest-continue" style="margin-top:1.2rem;display:none;">Continuar →</button>
+  </div>
+</div>
+
+<!-- MODAL BADGE -->
+<div id="badge-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <div class="confetti-container" id="badge-confetti"></div>
+    <div class="badge-earned">
+      <div class="be-icon" id="be-icon">🏅</div>
+      <div class="be-name" id="be-name">Nombre del Logro</div>
+      <div class="be-desc" id="be-desc">Descripción</div>
+      <div class="be-pts" id="be-pts">+20 pts por logro</div>
+    </div>
+    <button class="spin-btn" id="badge-continue" style="margin-top:1.4rem;">¡Genial!</button>
+  </div>
+</div>
+
+<style id="bullet-style"></style>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const REGIONS = {
+  andina:{key:'andina',name:'Región Andina',icon:'🏔️',desc:'Hogar de los Andes colombianos, donde la tradición cafetera y la cultura paisa se encuentran.',headerBg:'#d8f3dc',headerColor:'#2d6a4f',tagBg:'#2d6a4f',tagBorder:'#2d6a4f',bulletColor:'#2d6a4f',quizColor:'#2d6a4f',manifestaciones:['Carnaval de Negros y Blancos en Pasto','Feria de las Flores en Medellín','Festival Folclórico Colombiano en Ibagué','Tradición cafetera - Patrimonio de la Humanidad'],gastronomia:['Ajiaco','Bandeja Paisa','Lechona','Tamal','Arepas de choclo'],musica:['Bambuco','Pasillo','Guabina','Torbellino'],departamentos:'Antioquia, Boyacá, Caldas, Cundinamarca, Huila, Norte de Santander, Quindío, Risaralda, Santander, Tolima (incluye Nariño, Valle del Cauca y Cauca)',geografia:['Altiplano Cundiboyacense a 2.600 metros de altitud','Nevado del Ruiz: volcán activo más septentrional de Suramérica (5.321 m)','Volcán Galeras: uno de los más activos del mundo','Cañón del Chicamocha: uno de los cañones más grandes del mundo'],flora:['Cóndor de los Andes (ave nacional de Colombia)','Oso de anteojos: único oso nativo de Suramérica','Árbol de quina (árbol nacional de Colombia)','Frailejones','Tapir andino'],historia:['Muiscas y la leyenda de El Dorado','Quimbayas: maestros orfebres del oro precolombino','Bogotá, capital del Virreinato de la Nueva Granada desde 1717','El Bogotazo (1948): hito de la historia política colombiana'],demografia:['Bogotá: más de 8 millones de habitantes, tercera capital más alta del mundo','Bucaramanga: "la ciudad bonita de Colombia"','Comunidades Nasa (Cauca) y Pastos (Nariño)'],economia:['Flores de exportación: Cundinamarca y Antioquia lideran el mercado mundial','Caña de azúcar: Valle del Cauca produce el 90% del azúcar de Colombia','Industria textil: Medellín, capital de la moda en América Latina'],trajes:['Ruana boyacense','Carriel antioqueño','Sombrero aguadeño','Traje del arriero cafetero','Traje de la sanjuanera huilense'],turismo:['Parque Arqueológico de San Agustín (Patrimonio UNESCO)','Valle del Cocora y Salento','Villa de Leyva: pueblo colonial mejor conservado del país','Cañón del Chicamocha (deportes de aventura)'],personajes:['Fernando Botero: pintor y escultor de fama mundial','Falcao García: futbolista emblema de Colombia','Gustavo Petro: primer presidente de izquierda (2022)','Francisco de Paula Santander: "El Hombre de las Leyes"'],curiosidades:['Bogotá es la tercera capital más alta del mundo','Medellín fue elegida "Ciudad del Año" por el Urban Land Institute (2013)','La Tragedia de Armero (1985) fue causada por el Nevado del Ruiz','Puente de Occidente: primer puente colgante de América Latina'],questions:[{text:'¿Cuál festival famoso de la Región Andina se celebra en Medellín?',options:['Carnaval de Barranquilla','Feria de las Flores','Festival Vallenato','Petronio Álvarez'],correct:1,explanation:'¡Correcto! La Feria de las Flores de Medellín es una de las celebraciones más icónicas de la Región Andina.',wrongExplanation:'La respuesta correcta es la Feria de las Flores, celebrada en Medellín cada agosto.'},{text:'¿Cuál de estos platos es típico de la Región Andina?',options:['Sancocho de pescado','Arroz con coco','Bandeja Paisa','Rondón'],correct:2,explanation:'¡Muy bien! La Bandeja Paisa es el plato emblema de Antioquia y la Región Andina.',wrongExplanation:'La Bandeja Paisa es el plato representativo de la Región Andina.'},{text:'¿Qué distinción tiene la tradición cafetera colombiana?',options:['Es el café más caro del mundo','Es Patrimonio Cultural Inmaterial de la Humanidad','Solo se produce en Boyacá','Fue traída por comunidades indígenas'],correct:1,explanation:'¡Excelente! La tradición cafetera fue declarada Patrimonio Cultural Inmaterial de la Humanidad por la UNESCO en 2011.',wrongExplanation:'La tradición cafetera colombiana fue declarada Patrimonio Cultural Inmaterial de la Humanidad por la UNESCO.'},{text:'¿Cuál ritmo musical es originario de la Región Andina?',options:['Vallenato','Currulao','Bambuco','Joropo'],correct:2,explanation:'¡Perfecto! El Bambuco es el ritmo nacional de Colombia con raíces en la Región Andina.',wrongExplanation:'El Bambuco es el ritmo emblema de la Región Andina y el aire nacional de Colombia.'},{text:'¿En qué ciudad se celebra el Festival Folclórico Colombiano?',options:['Bogotá','Manizales','Ibagué','Tunja'],correct:2,explanation:'¡Muy bien! Ibagué, "Ciudad Musical de Colombia", alberga el Festival Folclórico Colombiano.',wrongExplanation:'El Festival Folclórico Colombiano se celebra en Ibagué, el Tolima.'},{text:'¿Cuál es el volcán activo más septentrional de Suramérica?',options:['Galeras','Puracé','Nevado del Ruiz','Doña Juana'],correct:2,explanation:'¡Correcto! El Nevado del Ruiz (5.321 m) es el volcán activo más septentrional de Suramérica.',wrongExplanation:'El Nevado del Ruiz es el volcán activo más septentrional de Suramérica, con 5.321 metros de altura.'},{text:'¿Qué civilización prehispánica dio origen a la leyenda de El Dorado?',options:['Quimbayas','Taironas','Muiscas','Zenúes'],correct:2,explanation:'¡Excelente! Los Muiscas del altiplano cundiboyacense son el origen de la mítica leyenda de El Dorado.',wrongExplanation:'Los Muiscas, asentados en el altiplano cundiboyacense, dieron origen a la leyenda de El Dorado.'},{text:'¿Qué porcentaje del azúcar colombiano produce el Valle del Cauca?',options:['50%','70%','90%','100%'],correct:2,explanation:'¡Correcto! El Valle del Cauca produce el 90% del azúcar de Colombia gracias a sus vastas plantaciones de caña.',wrongExplanation:'El Valle del Cauca concentra el 90% de la producción de azúcar de Colombia.'}]},
+  caribe:{key:'caribe',name:'Región Caribe',icon:'🎆',desc:'Región costera llena de alegría, donde el ritmo del vallenato y la cumbia llenan las calles.',headerBg:'#e3f2fd',headerColor:'#1565c0',tagBg:'#1565c0',tagBorder:'#1565c0',bulletColor:'#1565c0',quizColor:'#1565c0',manifestaciones:['Carnaval de Barranquilla (Patrimonio Cultural de la Humanidad)','Festival Vallenato en Valledupar','Fiestas del Mar en Santa Marta','Tradición oral del pueblo wayúu'],gastronomia:['Arepas de huevo','Sancocho de pescado','Arroz con coco','Cayeye','Bollo limpio'],musica:['Vallenato','Cumbia','Porro','Champeta','Bullerengue'],departamentos:'Atlántico, Bolívar, Cesar, Córdoba, La Guajira, Magdalena, Sucre',geografia:['1.600 km de costa sobre el mar Caribe','Sierra Nevada de Santa Marta: sistema montañoso costero más alto del mundo (5.775 m)','Desierto de La Guajira: único desierto real de Colombia','Ciénaga Grande de Santa Marta: humedal más grande del país','Río Sinú'],flora:['Flamencos rosados en la Laguna de Navío Quebrado','Manatíes en la Ciénaga Grande','Tortugas marinas','Manglares (mangle rojo y negro)','Vegetación desértica: trupillos y cardones'],historia:['Santa Marta fundada en 1525: ciudad más antigua de Colombia','Cartagena fundada en 1533','Simón Bolívar murió en Santa Marta en 1830','Canal del Dique: más de 400 años de antigüedad','Resistencia de los pueblos Zenú y Chimila'],demografia:['Lengua Wayuunaiki hablada por más de 300.000 personas','Arhuacos, Koguis y Wiwas habitan la Sierra Nevada','Comunidades raizales de San Andrés y Providencia'],economia:['Carbón: La Guajira y Cesar, mayores productores de Colombia','Ganadería extensiva en Córdoba y Sucre','Palma de aceite en Magdalena y Cesar','Pesca artesanal e industrial a lo largo de los 1.600 km de costa'],trajes:['Vestido de cumbia (pollera multicolor)','Wayuuco y mantas Wayúu','Personajes del Carnaval: Marimonda, Congo, Garabato','Traje del pilonero (camisa y pantalón blanco con pañoleta roja)'],turismo:['Parque Nacional Natural Tayrona','Ciudad Perdida (Teyuna)','Cabo de la Vela y Punta Gallinas (extremo norte de Suramérica)','Islas del Rosario (arrecifes coralinos)','Mompox (Patrimonio Mundial UNESCO)'],personajes:['Gabriel García Márquez: Premio Nobel de Literatura 1982, nacido en Aracataca','Carlos Vives: cantante nacido en Santa Marta','Diomedes Díaz: ídolo vallenato nacido en La Guajira','Rafael Núñez: autor del Himno Nacional, presidente cuatro veces'],curiosidades:['La lengua palenquera es el único idioma criollo con base léxica española en América','Punta Gallinas es el punto más al norte de toda Suramérica','Santa Marta es la ciudad más antigua de Colombia (fundada 1525)'],questions:[{text:'¿Cuál celebración fue declarada Patrimonio Cultural Inmaterial de la Humanidad?',options:['Festival Vallenato','Carnaval de Barranquilla','Fiestas del Mar','Festival de la Leyenda Vallenata'],correct:1,explanation:'¡Correcto! El Carnaval de Barranquilla fue declarado Patrimonio por la UNESCO en 2003.',wrongExplanation:'El Carnaval de Barranquilla es Patrimonio Cultural Inmaterial de la Humanidad desde 2003.'},{text:'¿Qué pueblo indígena del Caribe es reconocido por su tradición oral?',options:['Emberá','Wayúu','Tikuna','Zenú'],correct:1,explanation:'¡Excelente! El pueblo Wayúu de La Guajira es famoso por su rica tradición oral.',wrongExplanation:'El pueblo Wayúu de La Guajira es reconocido por su tradición oral y el tejido de la mochila wayúu.'},{text:'¿Cuál es el ritmo más representativo del Caribe colombiano?',options:['Bambuco','Mapalé','Vallenato','Joropo'],correct:2,explanation:'¡Perfecto! El Vallenato es el ritmo más emblemático del Caribe colombiano.',wrongExplanation:'El Vallenato, originario de Valledupar, es el ritmo más representativo del Caribe.'},{text:'¿Qué plato del Caribe se prepara con plátano verde?',options:['Ajiaco','Cayeye','Mamona','Casabe'],correct:1,explanation:'¡Muy bien! El Cayeye es un plato hecho de plátano verde cocido y majado.',wrongExplanation:'El Cayeye es el plato del Caribe hecho de plátano verde.'},{text:'¿En qué ciudad se celebra el Festival Vallenato?',options:['Barranquilla','Cartagena','Valledupar','Santa Marta'],correct:2,explanation:'¡Correcto! El Festival de la Leyenda Vallenata se celebra en Valledupar, Cesar.',wrongExplanation:'El Festival Vallenato se celebra en Valledupar, la capital del Cesar.'},{text:'¿Cuál es el sistema montañoso costero más alto del mundo?',options:['Sierra Nevada del Cocuy','Cordillera de los Andes','Sierra Nevada de Santa Marta','Serranía del Baudó'],correct:2,explanation:'¡Correcto! La Sierra Nevada de Santa Marta alcanza 5.775 m y es el sistema montañoso costero más alto del mundo.',wrongExplanation:'La Sierra Nevada de Santa Marta, con 5.775 metros, es el sistema montañoso costero más alto del mundo.'},{text:'¿Dónde murió Simón Bolívar?',options:['Bogotá','Caracas','Santa Marta','Cartagena'],correct:2,explanation:'¡Exacto! Simón Bolívar falleció en Santa Marta en 1830.',wrongExplanation:'Simón Bolívar murió en Santa Marta, Colombia, en 1830.'},{text:'¿De qué ciudad era oriundo el Nobel Gabriel García Márquez?',options:['Barranquilla','Valledupar','Riohacha','Aracataca'],correct:3,explanation:'¡Muy bien! Gabriel García Márquez nació en Aracataca, Magdalena, en 1927.',wrongExplanation:'Gabriel García Márquez nació en Aracataca, un pequeño municipio del Magdalena.'}]},
+  pacifica:{key:'pacifica',name:'Región Pacífica',icon:'🌊',desc:'Tierra de selva tropical y biodiversidad, cuna de ritmos afrocolombianos únicos.',headerBg:'#e8f5e9',headerColor:'#1b5e20',tagBg:'#1b5e20',tagBorder:'#1b5e20',bulletColor:'#1b5e20',quizColor:'#1b5e20',manifestaciones:['Petronio Álvarez - Festival de Música del Pacífico','Festival de Currulao','Tradiciones afrocolombianas','Artesanías en tagua y cestería'],gastronomia:['Sancocho de pescado','Arroz con camarón','Encocado','Pescado frito','Borojó'],musica:['Currulao','Bunde','Juga','Marimba de chonta','Salsa choke'],departamentos:'Chocó, Valle del Cauca, Cauca, Nariño',geografia:['1.300 km de costa sobre el Océano Pacífico','Pluviosidad superior a 9.000 mm anuales (hasta 13.000 mm en el Chocó)','Serranía del Baudó, exclusiva del Chocó','Bahía Málaga: sitio de anidación de ballenas jorobadas','Ríos San Juan, Atrato y Baudó'],flora:['Ballena jorobada: migra más de 8.000 km desde la Antártida (julio–noviembre)','Delfín rosado de río','Árbol de chonta','Caimán aguja (en peligro de extinción)','Rana dardo venenosa'],historia:['Comunidades originarias: Emberá, Wounaan y Tule','Resistencia cimarrona y formación de palenques','Istmo de San Pablo: menor distancia terrestre entre los dos océanos'],demografia:['Más del 70% de habitantes afrocolombianos (más del 80% en el Chocó)','Pueblo Wounaan: reconocidos por sus canastos de fibras naturales','Indígenas Eperara Siapidara en Cauca y Nariño'],economia:['Pesca de atún, pargo, corvina y camarón','Silvicultura (explotación de maderas tropicales)','Platanicultura como base de la seguridad alimentaria local'],trajes:['Bata chocoana (encajes y volantes blancos)','Turbante afro','Atuendo Emberá: paruma y collares de chaquiras','Traje de la chirimía'],turismo:['Nuquí y Bahía Solano','Parque Nacional Natural Utría','Isla Gorgona (antigua colonia penal, ahora parque marino)','Tumaco: puerta al Pacífico sur'],personajes:['Candelario Obeso: pionero de la poesía negra en América Latina','Manuel Zapata Olivella: escritor y antropólogo afrocolombiano','Francia Márquez: Vicepresidenta de Colombia (2022)'],curiosidades:['El Chocó recibe hasta 13.000 mm de lluvia al año, uno de los lugares más lluviosos del planeta','Las ballenas jorobadas recorren más de 8.000 km para dar a luz en aguas colombianas'],questions:[{text:'¿Cuál instrumento es símbolo del Pacífico colombiano?',options:['Acordeón','Marimba de chonta','Arpa llanera','Tiple andino'],correct:1,explanation:'¡Correcto! La Marimba de chonta fue declarada Patrimonio por la UNESCO en 2015.',wrongExplanation:'La Marimba de chonta es el instrumento representativo del Pacífico colombiano.'},{text:'¿Qué fruto del Pacífico es famoso por sus propiedades energéticas?',options:['Maracuyá','Borojó','Lulo','Guanábana'],correct:1,explanation:'¡Muy bien! El Borojó es una fruta tropical endémica del Chocó, muy nutritiva.',wrongExplanation:'El Borojó es el fruto emblemático del Pacífico colombiano.'},{text:'¿Cuál es el festival de música más importante del Pacífico?',options:['Festival Vallenato','Petronio Álvarez','Festival de Jazz de Cali','Feria de Cali'],correct:1,explanation:'¡Excelente! El Petronio Álvarez en Cali es el mayor festival de música afrocolombiana.',wrongExplanation:'El Festival Petronio Álvarez en Cali es el mayor festival de música del Pacífico.'},{text:'¿Cuántos departamentos conforman la Región Pacífica?',options:['Tres','Cuatro','Cinco','Seis'],correct:1,explanation:'¡Correcto! Chocó, Valle del Cauca, Cauca y Nariño.',wrongExplanation:'La Región Pacífica tiene 4 departamentos: Chocó, Valle del Cauca, Cauca y Nariño.'},{text:'¿Cuál ritmo es originario del Pacífico colombiano?',options:['Vallenato','Bambuco','Currulao','Joropo'],correct:2,explanation:'¡Perfecto! El Currulao es el ritmo ancestral del Pacífico con raíces africanas.',wrongExplanation:'El Currulao es el ritmo más representativo del Pacífico colombiano.'},{text:'¿Qué porcentaje de la población del Chocó es afrocolombiana?',options:['Más del 50%','Más del 60%','Más del 80%','El 100%'],correct:2,explanation:'¡Correcto! Más del 80% de los habitantes del Chocó son afrocolombianos.',wrongExplanation:'En el Chocó, más del 80% de la población es afrocolombiana.'},{text:'¿Cuándo llegan las ballenas jorobadas a aguas colombianas del Pacífico?',options:['Enero–marzo','Abril–junio','Julio–noviembre','Solo en diciembre'],correct:2,explanation:'¡Exacto! Las ballenas jorobadas llegan entre julio y noviembre para dar a luz.',wrongExplanation:'Las ballenas jorobadas visitan el Pacífico colombiano entre julio y noviembre.'},{text:'¿Quién fue Francia Márquez?',options:['Primera alcaldesa de Cali','Vicepresidenta de Colombia en 2022','Premio Nobel de Paz','Gobernadora del Chocó'],correct:1,explanation:'¡Muy bien! Francia Márquez se convirtió en Vicepresidenta de Colombia en 2022.',wrongExplanation:'Francia Márquez asumió como Vicepresidenta de Colombia en 2022.'}]},
+  orinoquia:{key:'orinoquia',name:'Región Orinoquía',icon:'🐎',desc:'Los llanos orientales, tierra de vaqueros, llaneros y paisajes infinitos.',headerBg:'#fff3e0',headerColor:'#e65100',tagBg:'#e65100',tagBorder:'#e65100',bulletColor:'#e65100',quizColor:'#e65100',manifestaciones:['Torneo Internacional del Joropo','Coleo llanero','Trabajo del vaquero (Patrimonio Cultural)','Leyendas del Silbón y La Llorona'],gastronomia:['Mamona','Cachama','Hayacas','Palo a pique','Guarapo'],musica:['Joropo','Galerón','Pasaje','Corrío'],departamentos:'Arauca, Casanare, Meta, Vichada',geografia:['Sabanas inundables entre abril y octubre','Piedemonte llanero: zona de transición andina','Sierra de La Macarena: formación geológica independiente de más de 1.000 millones de años'],flora:['Anaconda: serpiente más grande y pesada del mundo','Caimán del Orinoco (en peligro crítico de extinción)','Tonina (delfín rosado del Orinoco)','Garzón soldado: cigüeña más grande del continente americano','Jaguar'],historia:['Pueblos Achagua, Guahibo (Sikuani), Saliva y Piaroa','Misiones jesuitas en el siglo XVII','Jinetes llaneros como fuerza clave en el ejército libertador de Bolívar','Bonanza petrolera en los años 80 en Casanare y Arauca'],demografia:['Menos de 5 habitantes por km² en zonas remotas','Pueblo Sikuani: mayor comunidad indígena de los llanos','Villavicencio: "la puerta del llano"'],economia:['Petróleo: principal despensa de hidrocarburos de Colombia','Arroz: Meta es uno de los mayores productores nacionales','Palma de aceite en Meta y Casanare','Soya y maíz a gran escala','Turismo de hatos ganaderos (safaris fotográficos)'],trajes:['Liquiliqui (traje masculino tradicional llanero)','Sombrero pelo e\' guama','Alpargatas llaneras','Faja y rejo'],turismo:['Sierra de La Macarena y Caño Cristales','Turismo de hatos (safaris fotográficos de fauna)','Pesca deportiva en ríos Meta y Orinoco (payara y bagre)','Puerto Carreño: confluencia de los ríos Meta y Orinoco','Parque Nacional Natural El Tuparro'],personajes:['José Antonio Páez: héroe llanero y primer presidente de Venezuela','Reynaldo Armas: voz emblema de la música llanera','Arnulfo Briceño: compositor y cantautor de los llanos'],curiosidades:['La Orinoquía ocupa el 28% del territorio nacional pero solo habita el 3% de la población','En un solo día se pueden observar más de 300 especies de aves en los llanos'],questions:[{text:'¿Cuál es el deporte tradicional llanero en que se derriba ganado?',options:['Polo llanero','Coleo','Rodeo criollo','Herraje'],correct:1,explanation:'¡Correcto! El Coleo es Patrimonio Cultural de Colombia y Venezuela.',wrongExplanation:'El Coleo es el deporte típico llanero donde el jinete derriba el toro por la cola.'},{text:'¿Cuál es el plato más emblemático de la Orinoquía?',options:['Ajiaco','Sancocho de bocachico','Mamona','Bandeja Paisa'],correct:2,explanation:'¡Muy bien! La Mamona (ternera a la llanera) es el plato estrella de la Orinoquía.',wrongExplanation:'La Mamona es el plato más representativo de la Orinoquía.'},{text:'¿Cuál ritmo es más representativo de la Orinoquía?',options:['Cumbia','Bambuco','Currulao','Joropo'],correct:3,explanation:'¡Excelente! El Joropo es el ritmo de los Llanos, con arpa, maracas y cuatro.',wrongExplanation:'El Joropo es el ritmo emblemático de la Orinoquía colombiana.'},{text:'¿Qué leyenda es famosa en los Llanos colombianos?',options:['La Patasola','El Silbón','La Madremonte','El Mohan'],correct:1,explanation:'¡Perfecto! El Silbón es el espíritu que carga los huesos de su padre.',wrongExplanation:'El Silbón es la leyenda más famosa de los Llanos.'},{text:'¿Cuántos departamentos conforman la Región Orinoquía?',options:['Tres','Cuatro','Cinco','Seis'],correct:1,explanation:'¡Correcto! Arauca, Casanare, Meta y Vichada.',wrongExplanation:'La Región Orinoquía tiene 4 departamentos: Arauca, Casanare, Meta y Vichada.'},{text:'¿Qué porcentaje del territorio nacional ocupa la Orinoquía?',options:['15%','20%','28%','35%'],correct:2,explanation:'¡Correcto! La Orinoquía ocupa el 28% del territorio pero alberga solo el 3% de la población.',wrongExplanation:'La Orinoquía ocupa el 28% del territorio nacional con muy baja densidad poblacional.'},{text:'¿Cuál es la serpiente más grande y pesada del mundo que habita la Orinoquía?',options:['Boa constrictor','Pitón reticulada','Anaconda','Bushmaster'],correct:2,explanation:'¡Exacto! La anaconda, que habita los llanos inundables, es la serpiente más grande y pesada del mundo.',wrongExplanation:'La anaconda, presente en la Orinoquía colombiana, es la serpiente más grande y pesada del mundo.'},{text:'¿Cómo se llama el traje masculino tradicional de los llaneros?',options:['Ruana','Liquiliqui','Carriel','Cushma'],correct:1,explanation:'¡Muy bien! El Liquiliqui es el traje formal tradicional del hombre llanero.',wrongExplanation:'El Liquiliqui es el traje masculino tradicional de la cultura llanera.'}]},
+  amazonia:{key:'amazonia',name:'Región Amazonía',icon:'🦜',desc:'Pulmón del mundo, hogar de comunidades indígenas milenarias y biodiversidad incomparable.',headerBg:'#f1f8e9',headerColor:'#2e7d32',tagBg:'#2e7d32',tagBorder:'#2e7d32',bulletColor:'#2e7d32',quizColor:'#2e7d32',manifestaciones:['Más de 60 pueblos indígenas','Medicina ancestral y conocimiento tradicional','Artesanías en semillas y fibras naturales','Rituales y cosmovisión indígena'],gastronomia:['Pirarucú','Tucunaré','Casabe','Hormigas culonas','Frutas exóticas amazónicas'],musica:['Música indígena tradicional','Sonidos rituales','Instrumentos de viento ancestrales'],departamentos:'Amazonas, Caquetá, Guainía, Guaviare, Putumayo, Vaupés',geografia:['Representa el 35% del territorio nacional (más de 400.000 km²)','Río Putumayo: frontera natural con Ecuador y Perú','Tepuyes del Vaupés y Guainía: formaciones de más de 1.000 millones de años'],flora:['Águila harpía: rapaz más grande de la selva amazónica','Victoria regia: nenúfar gigante con hojas de más de un metro de diámetro','Árbol de caucho: base económica de los siglos XIX y XX'],historia:['Fiebre del Caucho (1870–1920) y el régimen de terror de la Casa Arana','Libro Rojo de Roger Casement: denuncia de crímenes contra indígenas','Constitución de 1991: los territorios amazónicos se convirtieron en departamentos'],demografia:['Menos de 1 habitante por km²','Pueblo Ticuna: mayor comunidad indígena de la región amazónica','Comunidades en aislamiento voluntario en Vaupés y Putumayo','Resguardos cubren más del 50% de la Amazonia colombiana','Decenas de lenguas nativas en peligro de extinción'],economia:['Pesca artesanal como fuente principal de proteína','Chagra tradicional: cultivo de yuca brava, plátano y frutas','Peces ornamentales de Guainía para mercados internacionales','Amenazas: minería ilegal y cultivos ilícitos'],trajes:['Coronas de plumas de guacamaya y tucán','Cushma (túnica de algodón)','Collares ceremoniales con semillas y dientes de animales','Faldas de palma para danzas rituales'],turismo:['Parque Nacional Natural Amacayacu','Lagos de Tarapoto (avistamiento de delfines rosados)','Reserva Natural Tanimboca (cabañas en copas de árboles)','Comunidades del Vaupés (río Pirá Paraná)'],personajes:['Álvaro Mutis: escritor que plasmó la selva amazónica en su obra literaria','OPIAC y COICA: organizaciones indígenas con voz ante la ONU'],curiosidades:['El río Negro tiene aguas tan ácidas que no crían mosquitos','Colombia supera en número de especies de plantas a toda Europa junta','El Mojojoy (larva comestible) es considerado superalimento del futuro'],questions:[{text:'¿Cuántos pueblos indígenas habitan la Amazonía colombiana?',options:['Más de 10','Más de 30','Más de 60','Más de 100'],correct:2,explanation:'¡Correcto! Más de 60 pueblos indígenas con lenguas y tradiciones propias.',wrongExplanation:'La Amazonía colombiana tiene más de 60 pueblos indígenas.'},{text:'¿Cuál es el pez gigante emblema del Amazonas?',options:['Bocachico','Bagre','Pirarucú','Cachama'],correct:2,explanation:'¡Excelente! El Pirarucú puede medir hasta 3 metros y pesar 200 kg.',wrongExplanation:'El Pirarucú es el pez de agua dulce más grande del mundo.'},{text:'¿Qué alimento amazónico se elabora con yuca brava?',options:['Mamona','Casabe','Hayacas','Cayeye'],correct:1,explanation:'¡Muy bien! El Casabe es un pan plano fundamental para las comunidades indígenas.',wrongExplanation:'El Casabe es el pan amazónico elaborado con yuca brava.'},{text:'¿Qué caracteriza a la Amazonía colombiana?',options:['Es la región más poblada','Tiene más ciudades','Es uno de los pulmones del mundo','Tiene la mayor producción agrícola'],correct:2,explanation:'¡Perfecto! La Amazonía es uno de los ecosistemas más biodiversos del planeta.',wrongExplanation:'La Amazonía es el "pulmón del mundo" por su producción de oxígeno y biodiversidad.'},{text:'¿En cuántos departamentos está dividida la Región Amazonía?',options:['Cuatro','Cinco','Seis','Siete'],correct:2,explanation:'¡Correcto! Amazonas, Caquetá, Guainía, Guaviare, Putumayo y Vaupés.',wrongExplanation:'La Amazonía colombiana tiene 6 departamentos.'},{text:'¿Qué porcentaje del territorio nacional representa la Amazonia colombiana?',options:['20%','28%','35%','45%'],correct:2,explanation:'¡Correcto! La Amazonia representa el 35% del territorio nacional con más de 400.000 km².',wrongExplanation:'La Amazonia colombiana representa el 35% del territorio nacional.'},{text:'¿Cuál es el pueblo indígena más numeroso de la Amazonia colombiana?',options:['Emberá','Wayúu','Ticuna','Sikuani'],correct:2,explanation:'¡Muy bien! El pueblo Ticuna es la mayor comunidad indígena de la región amazónica.',wrongExplanation:'El pueblo Ticuna es la comunidad indígena más grande de la Amazonia colombiana.'},{text:'¿Qué evento histórico devastó a los pueblos indígenas amazónicos entre 1870 y 1920?',options:['La Conquista española','La Fiebre del Caucho y la Casa Arana','La colonización jesuita','La Guerra de los Mil Días'],correct:1,explanation:'¡Exacto! La Fiebre del Caucho y el régimen de terror de la Casa Arana causaron miles de muertes indígenas.',wrongExplanation:'La Fiebre del Caucho (1870–1920) y la Casa Arana sometieron a los pueblos amazónicos a explotación brutal.'}]},
+  insular:{key:'insular',name:'Región Insular',icon:'🌴',desc:'Islas paradisíacas en el Caribe, con cultura raizal única y mar de siete colores.',headerBg:'#e8eaf6',headerColor:'#1a237e',tagBg:'#1a237e',tagBorder:'#1a237e',bulletColor:'#1a237e',quizColor:'#1a237e',manifestaciones:['Cultura raizal afrocaribeña','Idioma creole (San Andrés y Providencia)','Festival del Cangrejo Negro','Green Moon Festival'],gastronomia:['Rondón','Cangrejo negro','Caracol guisado','Fish & Festival','Johnny Cakes'],musica:['Reggae','Calypso','Socca','Mentó','Música raizal'],departamentos:'San Andrés, Providencia y Santa Catalina',geografia:['Ubicada a 12° N y 82° O en el Mar Caribe','Providencia: punto más alto es el Pico Occidental (360 m)','Laguna de San Andrés: manglar interior de gran valor ecológico','Cayos: Haynes Cay, Johnny Cay, Acuario y Rose Cay'],historia:['Primeros habitantes: indígenas Miskito','Colonización inglesa en 1629: puritanos y plantaciones de algodón','Adhesión a Colombia en 1822','Puerto Libre declarado en 1953 por Gustavo Rojas Pinilla','Disputa con Nicaragua resuelta por la CIJ de La Haya en 2012'],demografia:['Religión Bautista: protestantismo histórico arraigado en la cultura raizal','San Andrés tiene una de las densidades de población más altas de Colombia','Providencia logró frenar el turismo masivo preservando la cultura raizal'],economia:['Comercio de Puerto Libre: perfumes, licores y electrodomésticos importados','Economía del buceo recreativo y turismo de naturaleza','Artesanías con coco y fibras de palma'],trajes:['Pañuelo en la cabeza (símbolo de respeto en la cultura raizal)','Trajes de gala de estilo colonial inglés para los domingos','Ropa de faena de pescadores raizales'],turismo:['El Acuario y Haynes Cay (snorkel con mantarrayas)','Old Town en Providencia (arquitectura tradicional caribeña)','Paseo en lancha: Cabeza de Morgan y Puente de los Enamorados','Compras en San Andrés (Puerto Libre)'],personajes:['Natividad Bent: líder raizal en defensa de los derechos del pueblo isleño','Salvador Brown: músico y promotor de la cultura raizal','Franklyn Robinson: ambientalista destacado de Providencia','AMEN-SD: movimiento para la autodeterminación nativa isleña'],curiosidades:['Providencia fue elegida por Travel + Leisure como uno de los mejores destinos del mundo','Miles de cangrejos negros tapan las carreteras durante su migración anual al mar'],questions:[{text:'¿Qué idioma habla la comunidad raizal de San Andrés?',options:['Inglés estándar','Español caribeño','Creole (criollo)','Papiamento'],correct:2,explanation:'¡Correcto! El Creole es una lengua criolla de base inglesa con influencias africanas.',wrongExplanation:'La comunidad raizal habla Creole, una lengua criolla de base inglesa.'},{text:'¿Cuál es el plato más representativo de la Región Insular?',options:['Arepas de huevo','Rondón','Sancocho de pescado','Bandeja Paisa'],correct:1,explanation:'¡Muy bien! El Rondón es un guiso de mariscos en leche de coco.',wrongExplanation:'El Rondón es el plato más representativo de la Región Insular.'},{text:'¿Cómo se llama el festival cultural más importante de Providencia?',options:['Festival del Cangrejo','Green Moon Festival','Caribbean Fest','Festival Raizal'],correct:1,explanation:'¡Excelente! El Green Moon Festival celebra la cultura raizal en junio.',wrongExplanation:'El Green Moon Festival en Providencia es la celebración cultural más importante.'},{text:'¿Cuál ritmo es característico de la Región Insular?',options:['Vallenato','Bambuco','Calypso','Joropo'],correct:2,explanation:'¡Perfecto! El Calypso refleja la herencia afrocaribeña de la comunidad raizal.',wrongExplanation:'El Calypso es un ritmo representativo de la Región Insular.'},{text:'¿Por qué es famoso el mar de San Andrés?',options:['Por sus olas para surf','Por el "mar de siete colores"','Por ser el más profundo del Caribe','Por sus arrecifes de hielo'],correct:1,explanation:'¡Correcto! El mar de siete colores es uno de los arrecifes más grandes del hemisferio.',wrongExplanation:'El mar de San Andrés es conocido como el "mar de siete colores".'},{text:'¿En qué año fue declarado Puerto Libre San Andrés?',options:['1822','1953','1975','2012'],correct:1,explanation:'¡Correcto! El presidente Gustavo Rojas Pinilla declaró a San Andrés Puerto Libre en 1953.',wrongExplanation:'San Andrés fue declarado Puerto Libre en 1953 por el presidente Gustavo Rojas Pinilla.'},{text:'¿Cuál fue el origen de los primeros colonos europeos de las islas?',options:['Colonos españoles de Cartagena','Piratas holandeses','Puritanos ingleses en 1629','Misioneros franciscanos'],correct:2,explanation:'¡Exacto! Las islas fueron colonizadas por puritanos ingleses en 1629 que establecieron plantaciones de algodón.',wrongExplanation:'Los primeros colonos europeos fueron puritanos ingleses que llegaron en 1629.'},{text:'¿Qué fenómeno natural es famoso en la Región Insular?',options:['Erupciones volcánicas','Migración de cangrejos negros al mar','Avistamiento de ballenas azules','Lluvia de peces'],correct:1,explanation:'¡Muy bien! Miles de cangrejos negros tapan las carreteras durante su migración anual al mar.',wrongExplanation:'La migración masiva de cangrejos negros hacia el mar es uno de los espectáculos únicos de las islas.'}]}
+};
+
+const BADGES = [
+  {id:'andina_first',icon:'🏔️',name:'Montañero',desc:'Completaste el quiz de la Región Andina',region:'andina',pts:20},
+  {id:'caribe_first',icon:'🎆',name:'Costeño',desc:'Completaste el quiz de la Región Caribe',region:'caribe',pts:20},
+  {id:'pacifica_first',icon:'🌊',name:'Pacífico Profundo',desc:'Completaste el quiz de la Región Pacífica',region:'pacifica',pts:20},
+  {id:'orinoquia_first',icon:'🐎',name:'Llanero',desc:'Completaste el quiz de la Región Orinoquía',region:'orinoquia',pts:20},
+  {id:'amazonia_first',icon:'🦜',name:'Amazónico',desc:'Completaste el quiz de la Región Amazonía',region:'amazonia',pts:20},
+  {id:'insular_first',icon:'🌴',name:'Raizal',desc:'Completaste el quiz de la Región Insular',region:'insular',pts:20},
+  {id:'perfect_any',icon:'⭐',name:'Sin Errores',desc:'Puntaje perfecto en algún quiz',region:null,pts:30},
+  {id:'streak_3',icon:'🔥',name:'En Racha',desc:'Racha de 3 respuestas correctas',region:null,pts:15},
+  {id:'streak_5',icon:'💥',name:'Imparable',desc:'Racha de 5 respuestas correctas',region:null,pts:25},
+  {id:'all_regions',icon:'🇨🇴',name:'Colombiano Orgulloso',desc:'Completaste todas las regiones',region:null,pts:50},
+  {id:'speed_5',icon:'⚡',name:'Velocista',desc:'Respondiste 5 preguntas en menos de 5 seg',region:null,pts:20},
+  {id:'spinner',icon:'🎰',name:'El Azar Manda',desc:'Usaste la ruleta',region:null,pts:5},
+];
+
+const LEVELS=[{min:0,label:'🌱 Explorador'},{min:30,label:'🗺️ Aventurero'},{min:80,label:'🏅 Conocedor'},{min:150,label:'⭐ Experto'},{min:250,label:'🏆 Maestro Cultural'}];
+const TIMER_SECS=15;
+const CHEST_REWARDS=[{pts:20,label:'puntos de bonificación'},{pts:35,label:'puntos de bonificación'},{pts:50,label:'puntos de bonificación'},{pts:15,label:'puntos de bonificación'}];
+const WHEEL_COLORS=['#d8f3dc','#e3f2fd','#e8f5e9','#fff3e0','#f1f8e9','#e8eaf6'];
+const REGION_KEYS=Object.keys(REGIONS);
+
+const state={
+  totalPoints:0,streak:0,bestStreak:0,
+  completedRegions:{},currentRegion:null,
+  currentQuestionIdx:0,currentAnswers:[],answered:false,
+  unlockedBadges:new Set(),
+  timerInterval:null,timerLeft:TIMER_SECS,
+  questionStartTime:0,fastAnswers:0,
+  spinnerUsed:false
+};
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function getLevel(pts){let l=LEVELS[0];for(const x of LEVELS)if(pts>=x.min)l=x;return l.label;}
+
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const el=document.getElementById(id);
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function updateScoreBar(){
+  document.getElementById('sb-pts').textContent=state.totalPoints;
+  document.getElementById('sb-streak').textContent=state.streak>1?`🔥 ×${state.streak}`:'';
+  document.getElementById('sb-level').textContent=getLevel(state.totalPoints);
+}
+
+function showPtsToast(pts){
+  const t=document.getElementById('pts-toast');
+  t.textContent=`+${pts} pts`;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function addPoints(pts){state.totalPoints+=pts;updateScoreBar();showPtsToast(pts);}
+
+/* ============================================================
+   TIMER
+   ============================================================ */
+function startTimer(){
+  clearInterval(state.timerInterval);
+  state.timerLeft=TIMER_SECS;
+  state.questionStartTime=Date.now();
+  updateTimerUI();
+  state.timerInterval=setInterval(()=>{
+    state.timerLeft--;
+    updateTimerUI();
+    if(state.timerLeft<=0){clearInterval(state.timerInterval);timeOut();}
+  },1000);
+}
+
+function updateTimerUI(){
+  const pct=state.timerLeft/TIMER_SECS;
+  const circ=138.2;
+  const offset=circ*(1-pct);
+  const arc=document.getElementById('arc-fill');
+  const bar=document.getElementById('timer-bar-fill');
+  const num=document.getElementById('timer-num');
+  if(!arc)return;
+  arc.style.strokeDashoffset=offset;
+  let color=pct>.5?'var(--timer-ok)':pct>.25?'var(--timer-warn)':'var(--timer-danger)';
+  arc.style.stroke=color;
+  bar.style.width=(pct*100)+'%';
+  bar.style.background=color;
+  num.textContent=state.timerLeft;
+  if(state.timerLeft<=5){num.style.animation='timerPulse .5s infinite';}else{num.style.animation='';}
+}
+
+function timeOut(){
+  if(state.answered)return;
+  state.answered=true;
+  state.streak=0;
+  updateScoreBar();
+  const flash=document.getElementById('timeout-flash');
+  flash.classList.add('show');
+  setTimeout(()=>flash.classList.remove('show'),600);
+  const r=REGIONS[state.currentRegion];
+  const q=r.questions[state.currentQuestionIdx];
+  const btns=document.querySelectorAll('.option-btn');
+  btns.forEach((b,i)=>{b.disabled=true;if(i===q.correct)b.classList.add('correct');});
+  const fb=document.getElementById('feedback-panel');
+  document.getElementById('fb-icon').textContent='⏱️';
+  document.getElementById('fb-title').textContent='¡Se acabó el tiempo!';
+  document.getElementById('fb-text').textContent=q.wrongExplanation;
+  fb.className='feedback-panel err';
+  state.currentAnswers.push({correct:false,selectedIdx:-1,correctIdx:q.correct,questionText:q.text,selectedText:'(sin respuesta)',correctText:q.options[q.correct]});
+  document.getElementById('next-btn').style.display='block';
+}
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+function showRegions(){
+  renderRegionsList();updateScoreBar();
+  document.getElementById('score-bar').style.display='flex';
+  showView('regions-view');
+}
+
+function renderRegionsList(){
+  const container=document.getElementById('region-cards');
+  container.innerHTML='';
+  Object.values(REGIONS).forEach(r=>{
+    const done=state.completedRegions[r.key];
+    const badge=done?`<div class="rc-badge">✓</div>`:'';
+    const card=document.createElement('div');
+    card.className=`region-card r-${r.key}`;
+    card.innerHTML=`${badge}<div class="rc-icon">${r.icon}</div><div class="rc-info"><h3>${r.name}</h3><p>${r.desc}</p>${done?`<small>✓ ${done.score}/${done.total} en el quiz</small>`:''}</div><div class="rc-arrow">›</div>`;
+    card.addEventListener('click',()=>showDetail(r.key));
+    container.appendChild(card);
+  });
+
+  // Badges
+  const bg=document.getElementById('badges-grid');
+  bg.innerHTML='';
+  BADGES.forEach(b=>{
+    const unlocked=state.unlockedBadges.has(b.id);
+    const div=document.createElement('div');
+    div.className='badge-mini'+(unlocked?' unlocked':'');
+    div.innerHTML=`<div class="bm-icon">${b.icon}</div><div class="bm-name">${b.name}</div><div class="bm-locked">${unlocked?'Desbloqueado':'🔒 Bloqueado'}</div>`;
+    bg.appendChild(div);
+  });
+
+  // Progress
+  const total=REGION_KEYS.length;
+  const done=Object.keys(state.completedRegions).length;
+  const pct=Math.round((done/total)*100);
+  document.getElementById('global-bar').style.width=pct+'%';
+  document.getElementById('global-prog-label').textContent=`${done} de ${total} regiones completadas`;
+  document.getElementById('global-pct').textContent=pct+'%';
+}
+
+function showDetail(key){
+  state.currentRegion=key;
+  const r=REGIONS[key];const done=state.completedRegions[key];
+  let style=document.getElementById('bullet-style');
+  style.textContent=`#detail-content .detail-card ul li::before{background:${r.bulletColor};}`;
+  const liItems=r.manifestaciones.map(m=>`<li>${m}</li>`).join('');
+  const gastrTags=r.gastronomia.map(t=>`<span class="tag filled" style="background:${r.tagBg}">${t}</span>`).join('');
+  const musicTags=r.musica.map(t=>`<span class="tag" style="color:${r.tagBorder};border-color:${r.tagBorder}">${t}</span>`).join('');
+  const geoItems=r.geografia?r.geografia.map(m=>`<li>${m}</li>`).join(''):'';
+  const floraItems=r.flora?r.flora.map(m=>`<li>${m}</li>`).join(''):'';
+  const histItems=r.historia?r.historia.map(m=>`<li>${m}</li>`).join(''):'';
+  const demoItems=r.demografia?r.demografia.map(m=>`<li>${m}</li>`).join(''):'';
+  const econItems=r.economia?r.economia.map(m=>`<li>${m}</li>`).join(''):'';
+  const trajesTags=r.trajes?r.trajes.map(t=>`<span class="tag" style="color:${r.tagBorder};border-color:${r.tagBorder}">${t}</span>`).join(''):'';
+  const turItems=r.turismo?r.turismo.map(m=>`<li>${m}</li>`).join(''):'';
+  const persItems=r.personajes?r.personajes.map(m=>`<li>${m}</li>`).join(''):'';
+  const curiosItems=r.curiosidades?r.curiosidades.map(m=>`<li>${m}</li>`).join(''):'';
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-hero" style="background:${r.headerBg};color:${r.headerColor}">
+      <div class="dh-icon">${r.icon}</div>
+      <div><h2>${r.name}</h2><p>${r.desc}</p></div>
+    </div>
+    <div class="detail-card"><h3>🎭 Manifestaciones Culturales</h3><ul>${liItems}</ul></div>
+    <div class="detail-card"><h3>🍽️ Gastronomía Típica</h3><div class="tags">${gastrTags}</div></div>
+    <div class="detail-card"><h3>🎵 Música y Ritmos</h3><div class="tags">${musicTags}</div></div>
+    <div class="detail-card"><h3>📍 Departamentos</h3><p class="dept-text">${r.departamentos}</p></div>
+    ${geoItems?`<div class="detail-card"><h3>🌄 Geografía</h3><ul>${geoItems}</ul></div>`:''}
+    ${floraItems?`<div class="detail-card"><h3>🌿 Flora y Fauna</h3><ul>${floraItems}</ul></div>`:''}
+    ${histItems?`<div class="detail-card"><h3>📜 Historia</h3><ul>${histItems}</ul></div>`:''}
+    ${demoItems?`<div class="detail-card"><h3>👥 Demografía</h3><ul>${demoItems}</ul></div>`:''}
+    ${econItems?`<div class="detail-card"><h3>💼 Economía</h3><ul>${econItems}</ul></div>`:''}
+    ${trajesTags?`<div class="detail-card"><h3>👗 Trajes Típicos</h3><div class="tags">${trajesTags}</div></div>`:''}
+    ${turItems?`<div class="detail-card"><h3>🗺️ Turismo</h3><ul>${turItems}</ul></div>`:''}
+    ${persItems?`<div class="detail-card"><h3>🌟 Personajes Destacados</h3><ul>${persItems}</ul></div>`:''}
+    ${curiosItems?`<div class="detail-card"><h3>💡 Datos Curiosos</h3><ul>${curiosItems}</ul></div>`:''}
+    `;
+  const btn=document.getElementById('quiz-cta-btn');
+  btn.textContent=done?`🔄 Repetir Quiz — Último: ${done.score}/${done.total}`:'🧠 ¡Pon a prueba tu conocimiento!';
+  btn.style.background=`linear-gradient(135deg,${r.quizColor},${r.quizColor}cc)`;
+  showView('detail-view');
+}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+function startQuiz(){
+  const r=REGIONS[state.currentRegion];
+  state.currentQuestionIdx=0;state.currentAnswers=[];state.answered=false;state.fastAnswers=0;
+  renderQuestion();showView('quiz-view');
+}
+
+function renderQuestion(){
+  const r=REGIONS[state.currentRegion];
+  const q=r.questions[state.currentQuestionIdx];
+  const total=r.questions.length;
+  const idx=state.currentQuestionIdx;
+  document.getElementById('q-region-name').textContent=r.name;
+  document.getElementById('q-progress-text').textContent=`${idx+1} / ${total}`;
+  const fill=document.getElementById('q-progress-fill');
+  fill.style.width=`${((idx+1)/total)*100}%`;
+  fill.style.background=`linear-gradient(90deg,${r.quizColor},${r.quizColor}99)`;
+  document.getElementById('q-num').textContent=`Pregunta ${idx+1}`;
+  document.getElementById('q-text').textContent=q.text;
+  const letters=['A','B','C','D'];
+  const oc=document.getElementById('options-container');
+  oc.innerHTML='';
+  q.options.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='option-btn';
+    btn.innerHTML=`<span class="opt-letter">${letters[i]}</span>${opt}`;
+    btn.addEventListener('click',()=>selectAnswer(i));
+    oc.appendChild(btn);
+  });
+  const fb=document.getElementById('feedback-panel');
+  fb.className='feedback-panel';fb.style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  state.answered=false;
+  startTimer();
+}
+
+function selectAnswer(selectedIdx){
+  if(state.answered)return;
+  state.answered=true;
+  clearInterval(state.timerInterval);
+  const elapsed=(Date.now()-state.questionStartTime)/1000;
+  const r=REGIONS[state.currentRegion];
+  const q=r.questions[state.currentQuestionIdx];
+  const isCorrect=selectedIdx===q.correct;
+  const btns=document.querySelectorAll('.option-btn');
+  btns.forEach((b,i)=>{b.disabled=true;if(i===q.correct)b.classList.add('correct');else if(i===selectedIdx&&!isCorrect)b.classList.add('wrong');});
+  let earned=0;
+  if(isCorrect){
+    state.streak++;
+    if(state.streak>state.bestStreak)state.bestStreak=state.streak;
+    earned=10+(state.streak>1?5*(state.streak-1):0);
+    // Speed bonus
+    if(elapsed<5){state.fastAnswers++;earned+=5;}
+    addPoints(earned);
+    // Check badges
+    if(state.streak>=3)tryUnlockBadge('streak_3');
+    if(state.streak>=5)tryUnlockBadge('streak_5');
+  }else{
+    state.streak=0;updateScoreBar();
+  }
+  state.currentAnswers.push({correct:isCorrect,selectedIdx,correctIdx:q.correct,questionText:q.text,selectedText:q.options[selectedIdx],correctText:q.options[q.correct]});
+  const fb=document.getElementById('feedback-panel');
+  document.getElementById('fb-icon').textContent=isCorrect?'✅':'❌';
+  document.getElementById('fb-title').textContent=isCorrect?`¡Correcto! +${earned} pts${state.streak>1?` (racha ×${state.streak})`:''}${elapsed<5?' ⚡ Bono velocidad!':''}`:  'Respuesta incorrecta';
+  document.getElementById('fb-text').textContent=isCorrect?q.explanation:q.wrongExplanation;
+  fb.className='feedback-panel '+(isCorrect?'ok':'err');
+  const isLast=state.currentQuestionIdx===r.questions.length-1;
+  const nb=document.getElementById('next-btn');
+  nb.textContent=isLast?'Ver resultados →':'Siguiente pregunta →';
+  nb.style.display='block';
+}
+
+function nextQuestion(){
+  const r=REGIONS[state.currentRegion];
+  state.currentQuestionIdx++;
+  if(state.currentQuestionIdx>=r.questions.length)finishQuiz();
+  else renderQuestion();
+}
+
+/* ============================================================
+   RESULTS + COFRE + BADGES
+   ============================================================ */
+function finishQuiz(){
+  clearInterval(state.timerInterval);
+  const r=REGIONS[state.currentRegion];
+  const correct=state.currentAnswers.filter(a=>a.correct).length;
+  const total=r.questions.length;
+  const pct=Math.round((correct/total)*100);
+  state.completedRegions[state.currentRegion]={score:correct,total,pct,answers:[...state.currentAnswers]};
+  let trophy='🥉',grade='';
+  if(pct===100){trophy='🏆';grade='¡Puntaje perfecto! Eres un verdadero conocedor de esta región.';}
+  else if(pct>=80){trophy='🥇';grade='¡Excelente! Tienes un gran conocimiento de esta región.';}
+  else if(pct>=60){trophy='🥈';grade='¡Bien hecho! Sigue aprendiendo para dominar esta región.';}
+  else{trophy='🥉';grade='Sigue explorando. Cada error es una oportunidad de aprender.';}
+  document.getElementById('results-trophy').textContent=trophy;
+  document.getElementById('results-title').textContent=`${correct} de ${total} correctas`;
+  document.getElementById('results-subtitle').textContent=`${pct}% — ${r.name}`;
+  document.getElementById('results-grade').textContent=grade;
+  document.getElementById('rs-correct').textContent=correct;
+  document.getElementById('rs-pts').textContent=state.totalPoints;
+  document.getElementById('rs-streak').textContent=state.bestStreak;
+  const rl=document.getElementById('answer-review-list');
+  rl.innerHTML='';
+  state.currentAnswers.forEach((a,i)=>{
+    const d=document.createElement('div');
+    d.className='ar-item '+(a.correct?'ar-ok':'ar-err');
+    d.innerHTML=`<div class="ar-dot">${a.correct?'✓':'✗'}</div><div><div class="ar-q">${i+1}. ${a.questionText}</div><div class="ar-ans">Tu respuesta: ${a.selectedText}</div>${!a.correct?`<div class="ar-correct-ans">✓ Correcta: ${a.correctText}</div>`:''}</div>`;
+    rl.appendChild(d);
+  });
+  showView('results-view');
+  // Check badges after short delay
+  setTimeout(()=>{
+    let badgeToShow=null;
+    const regionBadge=BADGES.find(b=>b.region===state.currentRegion);
+    if(regionBadge&&!state.unlockedBadges.has(regionBadge.id)){
+      badgeToShow=regionBadge;tryUnlockBadge(regionBadge.id,false);
+    }
+    if(pct===100&&!state.unlockedBadges.has('perfect_any')){
+      if(!badgeToShow)badgeToShow=BADGES.find(b=>b.id==='perfect_any');
+      tryUnlockBadge('perfect_any',false);
+    }
+    if(Object.keys(state.completedRegions).length===REGION_KEYS.length&&!state.unlockedBadges.has('all_regions')){
+      if(!badgeToShow)badgeToShow=BADGES.find(b=>b.id==='all_regions');
+      tryUnlockBadge('all_regions',false);
+    }
+    if(state.fastAnswers>=5&&!state.unlockedBadges.has('speed_5')){
+      if(!badgeToShow)badgeToShow=BADGES.find(b=>b.id==='speed_5');
+      tryUnlockBadge('speed_5',false);
+    }
+    if(badgeToShow)showBadgeModal(badgeToShow);
+    else openChestModal();
+  },500);
+}
+
+function tryUnlockBadge(id,showModal=true){
+  if(state.unlockedBadges.has(id))return;
+  state.unlockedBadges.add(id);
+  const b=BADGES.find(x=>x.id===id);if(!b)return;
+  addPoints(b.pts);
+  if(showModal)showBadgeModal(b);
+}
+
+function showBadgeModal(badge){
+  document.getElementById('be-icon').textContent=badge.icon;
+  document.getElementById('be-name').textContent=badge.name;
+  document.getElementById('be-desc').textContent=badge.desc;
+  document.getElementById('be-pts').textContent=`+${badge.pts} pts de logro`;
+  spawnConfetti('badge-confetti');
+  document.getElementById('badge-modal').style.display='flex';
+  document.getElementById('badge-continue').onclick=()=>{
+    document.getElementById('badge-modal').style.display='none';
+    openChestModal();
+  };
+}
+
+function openChestModal(){
+  const chest=document.getElementById('chest-icon');
+  chest.textContent='📦';
+  document.getElementById('reward-reveal').classList.remove('show');
+  document.getElementById('chest-continue').style.display='none';
+  document.getElementById('confetti-container').innerHTML='';
+  document.getElementById('chest-modal').style.display='flex';
+  chest.onclick=()=>{
+    chest.classList.add('opening');
+    chest.textContent='🎁';
+    setTimeout(()=>chest.classList.remove('opening'),500);
+    const reward=CHEST_REWARDS[Math.floor(Math.random()*CHEST_REWARDS.length)];
+    document.getElementById('reward-pts').textContent=`+${reward.pts}`;
+    document.getElementById('reward-label').textContent=reward.label;
+    addPoints(reward.pts);
+    document.getElementById('reward-reveal').classList.add('show');
+    spawnConfetti('confetti-container');
+    document.getElementById('chest-continue').style.display='block';
+    chest.onclick=null;
+  };
+  document.getElementById('chest-continue').onclick=()=>{
+    document.getElementById('chest-modal').style.display='none';
+  };
+}
+
+function spawnConfetti(containerId){
+  const c=document.getElementById(containerId);
+  c.innerHTML='';
+  const colors=['#f5c518','#4a90d9','#7b5ea7','#e07b8c','#2d6a4f','#e65100'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.className='confetti-piece';
+    p.style.cssText=`left:${10+Math.random()*80}%;top:${Math.random()*30}%;background:${colors[i%colors.length]};animation-delay:${Math.random()*.6}s;animation-duration:${.7+Math.random()*.5}s;transform:rotate(${Math.random()*360}deg);`;
+    c.appendChild(p);
+  }
+}
+
+/* ============================================================
+   RULETA
+   ============================================================ */
+function openRuletaModal(){
+  document.getElementById('ruleta-modal').style.display='flex';
+  drawWheel(0);
+  document.getElementById('spin-btn').disabled=false;
+  if(!state.spinnerUsed){state.spinnerUsed=true;tryUnlockBadge('spinner');}
+}
+
+function drawWheel(angle){
+  const canvas=document.getElementById('wheel-canvas');
+  const ctx=canvas.getContext('2d');
+  const cx=120,cy=120,r=115;
+  const n=REGION_KEYS.length;
+  const arc=2*Math.PI/n;
+  ctx.clearRect(0,0,240,240);
+  REGION_KEYS.forEach((key,i)=>{
+    const start=angle+i*arc;
+    const end=start+arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end);ctx.closePath();
+    ctx.fillStyle=WHEEL_COLORS[i];ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);
+    ctx.rotate(start+arc/2);ctx.translate(r*.62,0);
+    ctx.font='bold 22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(REGIONS[key].icon,0,0);
+    ctx.restore();
+  });
+  // Center circle
+  ctx.beginPath();ctx.arc(cx,cy,22,0,2*Math.PI);
+  ctx.fillStyle='#fff';ctx.fill();
+  ctx.strokeStyle='#ddd';ctx.lineWidth=2;ctx.stroke();
+  ctx.font='bold 13px serif';ctx.fillStyle='#1a1a2e';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('RD',cx,cy);
+}
+
+function spinWheel(){
+  const btn=document.getElementById('spin-btn');
+  btn.disabled=true;
+  const totalRot=2*Math.PI*(5+Math.random()*5);
+  const targetIdx=Math.floor(Math.random()*REGION_KEYS.length);
+  const arc=2*Math.PI/REGION_KEYS.length;
+  const targetAngle=totalRot-(targetIdx*arc+arc/2)-Math.PI/2;
+  const duration=3500;const start=performance.now();
+  let currentAngle=0;
+  function animate(now){
+    const elapsed=Math.min(now-start,duration);
+    const ease=easeOut(elapsed/duration);
+    currentAngle=targetAngle*ease;
+    drawWheel(currentAngle);
+    if(elapsed<duration){requestAnimationFrame(animate);}
+    else{
+      const key=REGION_KEYS[targetIdx];
+      setTimeout(()=>{
+        document.getElementById('ruleta-modal').style.display='none';
+        showDetail(key);
+      },600);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function easeOut(t){return 1-Math.pow(1-t,4);}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('hero-btn').addEventListener('click',showRegions);
+  document.getElementById('back-to-regions').addEventListener('click',()=>{renderRegionsList();showView('regions-view');});
+  document.getElementById('back-to-detail').addEventListener('click',()=>{clearInterval(state.timerInterval);showDetail(state.currentRegion);});
+  document.getElementById('quiz-cta-btn').addEventListener('click',startQuiz);
+  document.getElementById('next-btn').addEventListener('click',nextQuestion);
+  document.getElementById('retry-btn').addEventListener('click',startQuiz);
+  document.getElementById('explore-btn').addEventListener('click',()=>{renderRegionsList();showView('regions-view');});
+  document.getElementById('ruleta-cta-btn').addEventListener('click',openRuletaModal);
+  document.getElementById('ruleta-close').addEventListener('click',()=>document.getElementById('ruleta-modal').style.display='none');
+  document.getElementById('spin-btn').addEventListener('click',spinWheel);
+  document.getElementById('score-bar').style.display='none';
+});
+</script>
+</body>
+</html>
